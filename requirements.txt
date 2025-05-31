@@ -6,5 +6,6 @@ ffmpeg-python
 requests
 numpy
 scipy
+scikit-learn
 
 
