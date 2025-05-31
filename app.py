@@ -1,4 +1,4 @@
-# app.py
+# Updated app.py using ffmpeg-python instead of moviepy
 
 import streamlit as st
 import tempfile
@@ -6,14 +6,14 @@ import os
 import torch
 import torchaudio
 import urllib.request
-from moviepy.editor import VideoFileClip
+import ffmpeg
 from transformers import Wav2Vec2Processor, Wav2Vec2Model
 from sklearn.linear_model import LogisticRegression
 import numpy as np
 
 st.set_page_config(page_title="English Accent Detector", layout="centered")
 
-st.title("🎙️ English Accent Detection Tool")
+st.title("🎧 English Accent Detection Tool")
 st.markdown("Upload or paste a public video link (MP4/Loom), and we'll analyze the speaker’s English accent.")
 
 # ---------------------- Accent Labels & Dummy Model ---------------------- #
@@ -41,12 +41,14 @@ def download_video(url):
     return tmp.name
 
 def extract_audio(video_path):
-    clip = VideoFileClip(video_path)
-    if clip.audio is None:
-        raise ValueError("No audio track found in the video.")
-    
     audio_path = tempfile.NamedTemporaryFile(delete=False, suffix=".wav").name
-    clip.audio.write_audiofile(audio_path, codec='pcm_s16le', fps=16000)
+    (
+        ffmpeg
+        .input(video_path)
+        .output(audio_path, format='wav', acodec='pcm_s16le', ac=1, ar='16k')
+        .overwrite_output()
+        .run()
+    )
     return audio_path
 
 def get_embedding(audio_path):
@@ -64,7 +66,6 @@ def get_embedding(audio_path):
         outputs = wav2vec_model(input_values)
     embedding = outputs.last_hidden_state.mean(dim=1).cpu().numpy()
     return embedding
-
 
 def predict_accent(embedding):
     probs = softmax(model.decision_function(embedding))[0]
@@ -87,7 +88,12 @@ if st.button("Analyze") and video_url:
             st.stop()
 
     with st.spinner("Extracting audio..."):
-        audio_path = extract_audio(video_file)
+        try:
+            audio_path = extract_audio(video_file)
+        except Exception as e:
+            st.error(f"Failed to extract audio: {e}")
+            os.remove(video_file)
+            st.stop()
 
     with st.spinner("Analyzing accent..."):
         embedding = get_embedding(audio_path)
