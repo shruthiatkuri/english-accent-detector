@@ -2,10 +2,9 @@ streamlit
 torch
 torchaudio
 transformers
-moviepy
-imageio
-imageio-ffmpeg
+ffmpeg-python
 requests
 numpy
 scipy
+
 
