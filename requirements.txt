@@ -3,6 +3,7 @@ torch
 torchaudio
 transformers
 moviepy
+imageio-ffmpeg
 requests
 numpy
 scipy
